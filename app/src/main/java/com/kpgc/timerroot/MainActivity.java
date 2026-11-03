@@ -643,6 +643,12 @@ public class MainActivity extends Activity {
                 if (!loaded && failure == null) {
                     failure = "timed out after 90s";
                 }
+                if (!loaded) {
+                    String tail = service.readLog();
+                    if (tail.contains("base calibration failed")) {
+                        failure = "base calibration failed (memory layout not supported)";
+                    }
+                }
                 if (loaded) {
                     parseInfo(service.info());
                 }

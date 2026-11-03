@@ -165,6 +165,42 @@ The status card reflects what is actually live, detected by running
 | Jailbreak mode | KernelSU loaded, `su` works in `u:r:ksu:s0` |
 
 
+## Troubleshooting
+
+### `KernelSU failed` and `base calibration failed` in the log
+
+The fake-credential stage needs the kernel linear-map base, which the exploit
+derives from page-alloc trace events. It assumes **4 KB pages**:
+
+```
+[base] made=512 best=0 count=0
+[-] base calibration failed
+```
+
+Check the page size of the device:
+
+```bash
+adb shell getconf PAGE_SIZE
+```
+
+- `4096`: the layout differs for another reason; collect `uname -r`, the model
+  and the full log and report it upstream.
+- `16384`: the exploit cannot work on this device as shipped. It has to be
+  rebuilt for 16 KB pages (page shifts, masks and order sizes), which is a
+  porting job rather than an app setting.
+
+The root shell can still succeed on such a device, because that path only needs
+the leaked credential address, not the linear-map base.
+
+### The card stays on `Not connected`
+
+Shizuku is not running. Start it again (it stops on every reboot) and see
+step 1.
+
+### `Prepare` reports nothing
+
+A system dialog may be covering the app (Shizuku pairing, OPPO installer scan).
+Close it and press `Prepare` again.
 ## Safety
 
 This is a kernel exploit. Read this before pressing anything.
