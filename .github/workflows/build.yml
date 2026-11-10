@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       include_upstream_binary:
-        description: 'Pull the upstream timer binary into assets (off by default)'
+        description: 'Include upstream timer binary (uncheck for app-shell-only APK)'
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -47,11 +47,14 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Fetch upstream binary (optional)
-        if: ${{ inputs.include_upstream_binary }}
+      # push builds and the default manual run include the binary; unchecking
+      # the dispatch input produces an app-shell-only APK.
+      - name: Fetch upstream timer binary
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.include_upstream_binary }}
         run: |
           git clone --depth 1 https://github.com/YuKongA/CVE-2026-98260.git "$RUNNER_TEMP/cve98260"
           cp "$RUNNER_TEMP/cve98260/timer/timer" app/src/main/assets/timer
+          ls -l app/src/main/assets/timer
 
       - name: Assemble debug APK
         run: |
