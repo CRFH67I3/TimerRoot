@@ -1,0 +1,58 @@
+name: Build TimerRoot APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      include_upstream_binary:
+        description: 'Pull the upstream timer binary into assets (off by default)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform 36 and build-tools
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools" > /dev/null
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Fetch upstream binary (optional)
+        if: ${{ inputs.include_upstream_binary }}
+        run: |
+          git clone --depth 1 https://github.com/YuKongA/CVE-2026-98260.git "$RUNNER_TEMP/cve98260"
+          cp "$RUNNER_TEMP/cve98260/timer/timer" app/src/main/assets/timer
+
+      - name: Assemble debug APK
+        run: gradle --no-daemon --stacktrace assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TimerRoot-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30

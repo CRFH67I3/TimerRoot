@@ -6,6 +6,11 @@ android {
     namespace 'com.kpgc.timerroot'
     compileSdk 36
 
+    // AGP 8.x disables AIDL by default; this project compiles an AIDL interface.
+    buildFeatures {
+        aidl = true
+    }
+
     defaultConfig {
         applicationId 'com.kpgc.timerroot'
         minSdk 30
