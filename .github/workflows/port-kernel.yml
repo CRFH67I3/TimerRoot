@@ -1,0 +1,127 @@
+name: Kernel portability check
+
+# Runs the upstream CVE-2026-98260 extractor against a device kernel image
+# uploaded as a Release asset, and reports whether the kernel can be ported.
+on:
+  workflow_dispatch:
+    inputs:
+      asset_name:
+        description: 'Release asset: gzip arm64 Image, or Android boot.img v3/v4'
+        type: string
+        default: 'everpal-4.14.357-kernel.img.gz'
+      release_tag:
+        description: 'Release tag holding the kernel sample'
+        type: string
+        default: 'kernel-samples'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download kernel sample
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kernel"
+          gh release download "${{ inputs.release_tag }}" \
+            --pattern "${{ inputs.asset_name }}" \
+            --repo "${{ github.repository }}" \
+            --dir "$RUNNER_TEMP/kernel"
+          ls -lh "$RUNNER_TEMP/kernel"
+          echo "KERNEL_FILE=$RUNNER_TEMP/kernel/${{ inputs.asset_name }}" >> "$GITHUB_ENV"
+
+      - name: Clone upstream extractor
+        run: git clone --depth 1 https://github.com/YuKongA/CVE-2026-98260.git "$RUNNER_TEMP/upstream"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build timer-extract
+        run: |
+          cargo build --release --manifest-path "$RUNNER_TEMP/upstream/tools/extract/Cargo.toml"
+          echo "EXTRACT=$RUNNER_TEMP/upstream/tools/extract/target/release/timer-extract" >> "$GITHUB_ENV"
+
+      - name: Analyze kernel and run timer-extract
+        run: |
+          python3 - <<'PY'
+          import os, gzip, re, struct, subprocess, sys
+
+          path = os.environ["KERNEL_FILE"]
+          extract = os.environ["EXTRACT"]
+          raw = open(path, "rb").read()
+          if raw[:8] == b"ANDROID!":
+              kernel = raw
+              print("input: Android boot image (v2 unsupported by extractor)")
+          elif raw[:3] == b"\x1f\x8b\x08":
+              kernel = gzip.decompress(raw)
+              print("input: gzip arm64 Image")
+          else:
+              kernel = raw
+          print("kernel image size:", len(kernel))
+          i = kernel.find(b"Linux version ")
+          banner = kernel[i:i+220].split(b"\0")[0].decode("ascii", "replace") if i >= 0 else "<none>"
+          print("kernel banner:", banner[:160])
+
+          valid_btf = 0
+          for m in re.finditer(b"\x9f\xeb", kernel):
+              o = m.start()
+              if o + 8 <= len(kernel) and kernel[o+2] == 1:
+                  hl = struct.unpack_from("<I", kernel, o+4)[0]
+                  if 24 <= hl <= 4096:
+                      valid_btf += 1
+          print("embedded BTF headers:", valid_btf)
+
+          ci = kernel.find(b"IKCFG_ST")
+          cfg = ""
+          if ci >= 0:
+              cj = kernel.find(b"IKCFG_ED", ci)
+              try:
+                  cfg = gzip.decompress(kernel[ci+8:cj]).decode("utf-8", "replace")
+              except Exception:
+                  pass
+          for key in ["CONFIG_DEBUG_INFO_BTF", "CONFIG_KALLSYMS_ALL",
+                      "CONFIG_ARM64_4K_PAGES", "CONFIG_ARM64_16K_PAGES"]:
+              line = next((l for l in cfg.splitlines() if l.startswith(key + "=")), None)
+              print("  ", line or (key + "=<absent>"))
+
+          required = ["do_timer_create", "posix_timers_cache", "begin_new_exec",
+                      "flush_old_exec", "posix_cpu_timer_del", "task_struct_cachep",
+                      "kmem_cache_alloc_noprof", "copy_process", "posixtimer_exec"]
+          print("required symbol names present as plain text:")
+          for s in required:
+              print("   %-28s %d" % (s, kernel.count(s.encode())))
+
+          print()
+          print("=== timer-extract (upstream, detect-only) ===")
+          p = subprocess.run([extract, path], capture_output=True, text=True, timeout=600)
+          print("exit code:", p.returncode)
+          print("stdout:", p.stdout.strip()[:2000] or "<empty>")
+          print("stderr:", p.stderr.strip()[:2000] or "<empty>")
+          meaning = {0: "VULNERABLE - profile can be generated",
+                     3: "PATCHED - upstream fix present",
+                     1: "ERROR - kernel cannot be processed by the extractor"}
+          print("verdict:", meaning.get(p.returncode, "unknown"))
+          print()
+          if p.returncode != 0:
+              print("CONCLUSION: this kernel cannot be added to timer/kbuilds/.")
+              print("A per-build profile is impossible here; timer.c will always")
+              print("exit at startup with 'unsupported kernel' on this device.")
+          else:
+              print("CONCLUSION: kernel is vulnerable. Next step is to run with --add,")
+              print("then rebuild timer.c with the generated profile and repackage the APK.")
+          PY
+
+      - name: Upload diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-portability-report
+          path: ${{ runner.temp }}/kernel/*.gz
+          if-no-files-found: ignore
