@@ -50,6 +50,7 @@ jobs:
 
       - name: Analyze kernel and run timer-extract
         run: |
+          {
           python3 - <<'PY'
           import os, gzip, re, struct, subprocess, sys
 
@@ -117,11 +118,12 @@ jobs:
               print("CONCLUSION: kernel is vulnerable. Next step is to run with --add,")
               print("then rebuild timer.c with the generated profile and repackage the APK.")
           PY
+          } 2>&1 | tee "$RUNNER_TEMP/kernel/report.txt"
 
       - name: Upload diagnostic report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: kernel-portability-report
-          path: ${{ runner.temp }}/kernel/*.gz
-          if-no-files-found: ignore
+          path: ${{ runner.temp }}/kernel/report.txt
+          if-no-files-found: warn
