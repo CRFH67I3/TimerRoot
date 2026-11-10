@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
         public void onServiceConnected(ComponentName name, IBinder binder) {
             service = IUserService.Stub.asInterface(binder);
             bound = true;
-            addLog("user service connected");
+            addLog(getString(R.string.log_service_connected));
             refreshDetails();
         }
 
@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
         public void onServiceDisconnected(ComponentName name) {
             service = null;
             bound = false;
-            addLog("user service disconnected");
+            addLog(getString(R.string.log_service_disconnected));
             refreshDetails();
         }
     };
@@ -128,7 +128,7 @@ public class MainActivity extends Activity {
         setContentView(root);
         showTab(0);
         refreshDetails();
-        addLog("TimerRoot ready");
+        addLog(getString(R.string.log_ready));
         if (safePing() && safePermission() == 0) {
             bindService();
         }
@@ -159,7 +159,7 @@ public class MainActivity extends Activity {
         title.setTypeface(Typeface.DEFAULT_BOLD);
         header.addView(title, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        header.addView(pill("Reboot", RED, CARD, v -> reboot()));
+        header.addView(pill(getString(R.string.action_reboot), RED, CARD, v -> reboot()));
         body.addView(header);
         body.addView(spacer(12));
 
@@ -171,12 +171,12 @@ public class MainActivity extends Activity {
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
         statusTitle = new TextView(this);
-        statusTitle.setText("Not connected");
+        statusTitle.setText(getString(R.string.status_not_connected));
         statusTitle.setTextColor(TEXT);
         statusTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
         statusTitle.setTypeface(Typeface.DEFAULT_BOLD);
         statusSubtitle = new TextView(this);
-        statusSubtitle.setText("Start Shizuku first");
+        statusSubtitle.setText(getString(R.string.status_start_shizuku));
         statusSubtitle.setTextColor(0xFFBFD8C6);
         statusSubtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         texts.addView(statusTitle);
@@ -196,8 +196,8 @@ public class MainActivity extends Activity {
         LinearLayout details = new LinearLayout(this);
         details.setOrientation(LinearLayout.VERTICAL);
         details.setBackground(cardBackground(CARD));
-        detailModel = addRow(details, "Device", "-", true);
-        detailKernel = addRow(details, "Kernel", "-", true);
+        detailModel = addRow(details, getString(R.string.detail_device), "-", true);
+        detailKernel = addRow(details, getString(R.string.detail_kernel), "-", true);
         detailKsud = addRow(details, "ksud", "-", true);
         detailKsu = addRow(details, "KernelSU", "-", true);
         detailSelinux = addRow(details, "SELinux", "-", true);
@@ -208,20 +208,20 @@ public class MainActivity extends Activity {
         LinearLayout tools = new LinearLayout(this);
         tools.setOrientation(LinearLayout.HORIZONTAL);
         tools.addView(pill("Shizuku", TEXT, CARD, v -> showShizuku()), rowParams());
-        tools.addView(pill("Prepare", TEXT, CARD, v -> prepare()), rowParams());
-        tools.addView(pill("Diagnose", TEXT, CARD, v -> run("ids", "ids")), rowParams());
-        tools.addView(pill("Log", TEXT, CARD, v -> showTab(1)), rowParams());
+        tools.addView(pill(getString(R.string.action_prepare), TEXT, CARD, v -> prepare()), rowParams());
+        tools.addView(pill(getString(R.string.action_diagnose), TEXT, CARD, v -> run("ids", "ids")), rowParams());
+        tools.addView(pill(getString(R.string.tab_log), TEXT, CARD, v -> showTab(1)), rowParams());
         body.addView(tools);
 
-        body.addView(bigButton("Get root shell", GREEN, 0xFF04140A, v -> confirmRoot()));
+        body.addView(bigButton(getString(R.string.action_root_shell), GREEN, 0xFF04140A, v -> confirmRoot()));
         body.addView(spacer(8));
-        body.addView(bigButton("Load KernelSU", 0xFF1F7A3D, 0xFFE8FFF0, v -> confirmKsu()));
+        body.addView(bigButton(getString(R.string.action_load_ksu), 0xFF1F7A3D, 0xFFE8FFF0, v -> confirmKsu()));
         body.addView(spacer(8));
-        body.addView(bigButton("Stop", CARD, RED, v -> stopRoot()));
+        body.addView(bigButton(getString(R.string.action_stop), CARD, RED, v -> stopRoot()));
 
         body.addView(spacer(18));
-        body.addView(smallHint("First run: allow Shizuku, then press Prepare. "
-                + "The exploit needs the shell user, which is why it runs through Shizuku."));
+        body.addView(smallHint(getString(R.string.hint_first_run_1)
+                + getString(R.string.hint_first_run_2)));
         body.addView(spacer(8));
 
 
@@ -239,16 +239,16 @@ public class MainActivity extends Activity {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = new TextView(this);
-        title.setText("Log");
+        title.setText(getString(R.string.tab_log));
         title.setTextColor(TEXT);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         header.addView(title, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        header.addView(pill("Copy", TEXT, CARD, v -> copyLog()));
-        header.addView(pill("Clear", TEXT, CARD, v -> {
+        header.addView(pill(getString(R.string.action_copy), TEXT, CARD, v -> copyLog()));
+        header.addView(pill(getString(R.string.action_clear), TEXT, CARD, v -> {
             logText.setText("");
-            addLog("log cleared");
+            addLog(getString(R.string.log_cleared));
         }));
         page.addView(header);
         page.addView(spacer(12));
@@ -275,8 +275,8 @@ public class MainActivity extends Activity {
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setBackgroundColor(0xFF141416);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        tabHome = tab("Home", v -> showTab(0));
-        tabLog = tab("Log", v -> showTab(1));
+        tabHome = tab(getString(R.string.tab_home), v -> showTab(0));
+        tabLog = tab(getString(R.string.tab_log), v -> showTab(1));
         bar.addView(tabHome, rowParams());
         bar.addView(tabLog, rowParams());
         return bar;
@@ -453,32 +453,32 @@ public class MainActivity extends Activity {
                     rootOpen || "active".equals(ksu) ? GREEN_DARK : CARD));
         }
         detailKsud.setText(ksud);
-        detailKsu.setText("active".equals(ksu) ? "jailbreak mode (u:r:ksu:s0)" : ksu);
+        detailKsu.setText("active".equals(ksu) ? getString(R.string.status_jailbreak_detail) : ksu);
         detailSelinux.setText(selinux);
         detailSeccomp.setText(seccomp);
         boolean shizuku = safePing();
         if ("active".equals(ksu)) {
-            statusTitle.setText("Jailbreak mode");
-            statusSubtitle.setText("KernelSU loaded · su in u:r:ksu:s0 · gone after reboot");
+            statusTitle.setText(getString(R.string.status_jailbreak));
+            statusSubtitle.setText(getString(R.string.status_ksu_loaded));
             statusBadge.setText("✓");
             statusBadge.setTextColor(GREEN);
         } else if (rootOpen) {
-            statusTitle.setText("Root shell");
-            statusSubtitle.setText("uid=0 · u:r:shell:s0 · gone after reboot");
+            statusTitle.setText(getString(R.string.status_root_shell));
+            statusSubtitle.setText(getString(R.string.status_root_detail));
             statusBadge.setText("✓");
             statusBadge.setTextColor(GREEN);
         } else if (shizuku && bound) {
-            statusTitle.setText("Ready");
-            statusSubtitle.setText("Shizuku connected · no root yet");
+            statusTitle.setText(getString(R.string.status_ready));
+            statusSubtitle.setText(getString(R.string.status_ready_detail));
             statusBadge.setText("•");
             statusBadge.setTextColor(MUTED);
         } else {
-            statusTitle.setText("Not connected");
+            statusTitle.setText(getString(R.string.status_not_connected));
             statusSubtitle.setText(shizuku
                     ? (safePermission() == 0
-                        ? "Shizuku is running · connecting..."
-                        : "Shizuku is running · grant permission")
-                    : "Start Shizuku first");
+                        ? getString(R.string.status_connecting)
+                        : getString(R.string.status_grant))
+                    : getString(R.string.status_start_shizuku));
             statusBadge.setText("?");
             statusBadge.setTextColor(MUTED);
         }
@@ -495,20 +495,20 @@ public class MainActivity extends Activity {
     private void showShizuku() {
         StringBuilder sb = new StringBuilder();
         try {
-            sb.append("running: ").append(Shizuku.pingBinder()).append('\n');
-            sb.append("permission: ").append(Shizuku.checkSelfPermission()).append('\n');
-            sb.append("pre-v11: ").append(Shizuku.isPreV11()).append('\n');
-            sb.append("bound: ").append(bound);
+            sb.append(getString(R.string.diag_running)).append(Shizuku.pingBinder()).append('\n');
+            sb.append(getString(R.string.diag_permission)).append(Shizuku.checkSelfPermission()).append('\n');
+            sb.append(getString(R.string.diag_pre_v11)).append(Shizuku.isPreV11()).append('\n');
+            sb.append(getString(R.string.diag_bound)).append(bound);
         } catch (Throwable t) {
-            sb.append("Shizuku not available: ").append(t);
+            sb.append(getString(R.string.diag_unavailable)).append(t);
         }
         addLog(sb.toString());
         if (safePing() && safePermission() != 0) {
             try {
                 Shizuku.requestPermission(REQUEST_CODE);
-                addLog("permission requested");
+                addLog(getString(R.string.log_permission_requested));
             } catch (Throwable t) {
-                addLog("request failed: " + t);
+                addLog(getString(R.string.log_request_failed) + t);
             }
         } else if (safePing() && !bound) {
             bindService();
@@ -526,21 +526,21 @@ public class MainActivity extends Activity {
     private void prepare() {
         if (!safePing()) {
             new AlertDialog.Builder(this)
-                    .setTitle("Shizuku is not running")
-                    .setMessage("Start Shizuku first:\n\n"
-                            + "1. open the Shizuku app\n"
-                            + "2. use Start via wireless debugging (or pair over USB)\n"
-                            + "3. come back here and press Prepare again")
-                    .setPositiveButton("OK", null)
+                    .setTitle(getString(R.string.dlg_shizuku_title))
+                    .setMessage(getString(R.string.dlg_shizuku_msg_1)
+                            + getString(R.string.dlg_shizuku_msg_2)
+                            + getString(R.string.dlg_shizuku_msg_3)
+                            + getString(R.string.dlg_shizuku_msg_4))
+                    .setPositiveButton(getString(R.string.action_ok), null)
                     .show();
             return;
         }
         if (service == null) {
             bindService();
-            toast("Connecting to Shizuku...");
+            toast(getString(R.string.toast_connecting));
             return;
         }
-        toast("Preparing...");
+        toast(getString(R.string.toast_preparing));
         new Thread(() -> {
             try {
                 final String result = service.install(getPackageCodePath());
@@ -550,8 +550,8 @@ public class MainActivity extends Activity {
                     refreshDetails();
                 });
             } catch (Throwable t) {
-                addLog("prepare failed: " + t);
-                ui.post(() -> toast("prepare failed: " + t));
+                addLog(getString(R.string.log_prepare_failed) + t);
+                ui.post(() -> toast(getString(R.string.log_prepare_failed) + t));
             }
         }).start();
     }
@@ -562,19 +562,19 @@ public class MainActivity extends Activity {
 
     private void confirmRoot() {
         new AlertDialog.Builder(this)
-                .setTitle("Get a root shell?")
-                .setMessage("Runs CVE-2026-98260 once and keeps a uid=0 shell open.\n\n"
-                        + "- On a failed attempt the process is parked until you reboot\n"
-                        + "- Root disappears when you reboot\n"
-                        + "- Do not use the device while it runs")
-                .setPositiveButton("Run", (d, w) -> runRoot())
-                .setNegativeButton("Cancel", null)
+                .setTitle(getString(R.string.dlg_root_title))
+                .setMessage(getString(R.string.dlg_root_msg_1)
+                        + getString(R.string.dlg_root_msg_2)
+                        + getString(R.string.dlg_root_msg_3)
+                        + getString(R.string.dlg_common_warn))
+                .setPositiveButton(getString(R.string.action_run), (d, w) -> runRoot())
+                .setNegativeButton(getString(R.string.action_cancel), null)
                 .show();
     }
 
     private void runRoot() {
         if (service == null) {
-            addLog("bind the service first");
+            addLog(getString(R.string.log_bind_first));
             return;
         }
         new Thread(() -> {
@@ -584,30 +584,30 @@ public class MainActivity extends Activity {
                 addLog(out);
                 ui.post(this::applyDetails);
                 if (rootOpen && !"active".equals(ksu)) {
-                    addLog("root shell ready - loading KernelSU...");
+                    addLog(getString(R.string.log_root_ready));
                     runKsu();
                 }
             } catch (Throwable t) {
-                addLog("root failed: " + t);
+                addLog(getString(R.string.log_root_failed) + t);
             }
         }).start();
     }
 
     private void confirmKsu() {
         new AlertDialog.Builder(this)
-                .setTitle("Load KernelSU?")
-                .setMessage("Late-loads ksud through a fake credential.\n\n"
-                        + "- On success su works in u:r:ksu:s0\n"
-                        + "- The parent process parks; reboot to clean up\n"
-                        + "- Do not use the device while it runs")
-                .setPositiveButton("Run", (d, w) -> runKsu())
-                .setNegativeButton("Cancel", null)
+                .setTitle(getString(R.string.dlg_ksu_title))
+                .setMessage(getString(R.string.dlg_ksu_msg_1)
+                        + getString(R.string.dlg_ksu_msg_2)
+                        + getString(R.string.dlg_ksu_msg_3)
+                        + getString(R.string.dlg_common_warn))
+                .setPositiveButton(getString(R.string.action_run), (d, w) -> runKsu())
+                .setNegativeButton(getString(R.string.action_cancel), null)
                 .show();
     }
 
     private void runKsu() {
         if (service == null) {
-            addLog("bind the service first");
+            addLog(getString(R.string.log_bind_first));
             return;
         }
         new Thread(() -> {
@@ -624,29 +624,29 @@ public class MainActivity extends Activity {
                         break;
                     }
                     if (tail.contains("selinux write failed")) {
-                        failure = "the selinux stage missed its race";
+                        failure = getString(R.string.fail_selinux_race);
                         break;
                     }
                     if (tail.contains("parking without reap")) {
-                        failure = "the exploit parked before loading ksud";
+                        failure = getString(R.string.fail_parked);
                         break;
                     }
                     final long secs = (System.currentTimeMillis() - start) / 1000;
                     if (secs % 5 == 0) {
                         ui.post(() -> {
                             if (statusSubtitle != null) {
-                                statusSubtitle.setText("Loading KernelSU... " + secs + "s");
+                                statusSubtitle.setText(getString(R.string.status_loading_ksu) + secs + "s");
                             }
                         });
                     }
                 }
                 if (!loaded && failure == null) {
-                    failure = "timed out after 90s";
+                    failure = getString(R.string.fail_timeout);
                 }
                 if (!loaded) {
                     String tail = service.readLog();
                     if (tail.contains("base calibration failed")) {
-                        failure = "base calibration failed (memory layout not supported)";
+                        failure = getString(R.string.fail_calibration);
                     }
                 }
                 if (loaded) {
@@ -658,20 +658,20 @@ public class MainActivity extends Activity {
                 ui.post(() -> {
                     applyDetails();
                     if (ok) {
-                        toast("KernelSU loaded (jailbreak mode)");
+                        toast(getString(R.string.toast_ksu_loaded));
                         refreshDetails();
                     } else {
-                        statusTitle.setText("KernelSU failed");
-                        statusSubtitle.setText(reason + " - reboot, then retry");
+                        statusTitle.setText(getString(R.string.status_ksu_failed));
+                        statusSubtitle.setText(reason + getString(R.string.status_reboot_retry));
                         statusBadge.setText("!");
                         statusBadge.setTextColor(RED);
-                        toast("KernelSU failed: " + reason);
-                        addLog("KernelSU failed: " + reason
-                                + " - parked processes remain; reboot to clean up");
+                        toast(getString(R.string.toast_ksu_failed) + reason);
+                        addLog(getString(R.string.toast_ksu_failed) + reason
+                                + getString(R.string.log_parked));
                     }
                 });
             } catch (Throwable t) {
-                addLog("ksu failed: " + t);
+                addLog(getString(R.string.log_ksu_failed) + t);
             }
         }).start();
     }
@@ -686,18 +686,18 @@ public class MainActivity extends Activity {
                 rootOpen = false;
                 ui.post(this::applyDetails);
             } catch (Throwable t) {
-                addLog("stop failed: " + t);
+                addLog(getString(R.string.log_stop_failed) + t);
             }
         }).start();
     }
 
     private void reboot() {
         new AlertDialog.Builder(this)
-                .setTitle("Reboot the device?")
-                .setMessage("This is the only way to clean up parked processes.")
-                .setPositiveButton("Reboot", (d, w) -> {
+                .setTitle(getString(R.string.dlg_reboot_title))
+                .setMessage(getString(R.string.dlg_reboot_msg))
+                .setPositiveButton(getString(R.string.action_reboot), (d, w) -> {
                     if (service == null) {
-                        toast("bind the service first");
+                        toast(getString(R.string.log_bind_first));
                         return;
                     }
                     new Thread(() -> {
@@ -705,17 +705,17 @@ public class MainActivity extends Activity {
                             final String result = service.rebootDevice();
                             ui.post(() -> toast(result));
                         } catch (Throwable t) {
-                            ui.post(() -> toast("reboot failed: " + t));
+                            ui.post(() -> toast(getString(R.string.log_reboot_failed) + t));
                         }
                     }).start();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(getString(R.string.action_cancel), null)
                 .show();
     }
 
     private void run(String label, String args) {
         if (service == null) {
-            addLog("bind the service first");
+            addLog(getString(R.string.log_bind_first));
             return;
         }
         new Thread(() -> {
@@ -732,9 +732,9 @@ public class MainActivity extends Activity {
     private void bindService() {
         try {
             Shizuku.bindUserService(serviceArgs(), connection);
-            addLog("binding user service...");
+            addLog(getString(R.string.log_binding));
         } catch (Throwable t) {
-            addLog("bind failed: " + t);
+            addLog(getString(R.string.log_bind_failed) + t);
         }
     }
 
@@ -752,10 +752,10 @@ public class MainActivity extends Activity {
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (cm != null) {
                 cm.setPrimaryClip(ClipData.newPlainText("TimerRoot", logText.getText()));
-                addLog("log copied");
+                addLog(getString(R.string.log_copied));
             }
         } catch (Throwable t) {
-            addLog("copy failed: " + t);
+            addLog(getString(R.string.log_copy_failed) + t);
         }
     }
 
