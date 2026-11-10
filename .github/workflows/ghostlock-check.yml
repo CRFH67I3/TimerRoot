@@ -1,0 +1,107 @@
+name: GhostLock portability check
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_name:
+        description: 'Release asset with the device kernel (gzip arm64 Image)'
+        type: string
+        default: 'evergo-4.14.186-kernel.img.gz'
+      release_tag:
+        type: string
+        default: 'kernel-samples'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download device kernel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kernel"
+          gh release download "${{ inputs.release_tag }}" \
+            --pattern "${{ inputs.asset_name }}" --repo "${{ github.repository }}" \
+            --dir "$RUNNER_TEMP/kernel"
+          echo "KERNEL_FILE=$RUNNER_TEMP/kernel/${{ inputs.asset_name }}" >> "$GITHUB_ENV"
+
+      - name: Clone GhostLock upstream
+        run: git clone --depth 1 https://github.com/YuKongA/ghostlock-app.git "$RUNNER_TEMP/ghostlock"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build ghostlock-extract
+        run: |
+          cargo build --release --manifest-path "$RUNNER_TEMP/ghostlock/tools/extract_rs/Cargo.toml"
+          EXTRACT=$(find "$RUNNER_TEMP/ghostlock" -type f -name ghostlock-extract -perm -u+x | head -1)
+          echo "EXTRACT=$EXTRACT" >> "$GITHUB_ENV"
+          echo "built: $EXTRACT"
+
+      - name: Run extractor and summarize
+        run: |
+          {
+          python3 - <<'PY'
+          import os, gzip, struct, subprocess, re
+          path=os.environ["KERNEL_FILE"]; ex=os.environ["EXTRACT"]
+          raw=open(path,"rb").read()
+          img=gzip.decompress(raw) if raw[:3]==b"\x1f\x8b\x08" else raw
+          i=img.find(b"Linux version ")
+          print("image        ", path, len(raw), "bytes")
+          print("kernel banner", img[i:i+150].split(b"\0")[0].decode("ascii","replace") if i>=0 else "<none>")
+          ci=img.find(b"IKCFG_ST"); cfg=""
+          if ci>=0:
+              cj=img.find(b"IKCFG_ED",ci)
+              try: cfg=gzip.decompress(img[ci+8:cj]).decode("utf-8","replace")
+              except Exception: pass
+          print("=== CVE-2026-43499 preconditions (from embedded .config) ===")
+          for k in ["CONFIG_FUTEX_PI","CONFIG_RT_MUTEXES","CONFIG_PREEMPT","CONFIG_ASHMEM",
+                    "CONFIG_DEBUG_INFO_BTF","CONFIG_ARM64_4K_PAGES","CONFIG_KALLSYMS_ALL"]:
+              line=next((l for l in cfg.splitlines() if l.startswith(k+"=")),None)
+              print("  ", line or (k+"=<absent>"))
+          valid=0
+          for m in re.finditer(b"\x9f\xeb",img):
+              o=m.start()
+              if o+8<=len(img) and img[o+2]==1 and 24<=struct.unpack_from("<I",img,o+4)[0]<=4096:
+                  valid+=1
+          print("embedded BTF headers:",valid)
+          print()
+          print("=== ghostlock-extract --format text ===")
+          p=subprocess.run([ex,path,"--format","text"],capture_output=True,text=True,timeout=900)
+          print("exit:",p.returncode)
+          print((p.stdout or "").strip()[:2500] or "<empty stdout>")
+          print("stderr:",(p.stderr or "").strip()[:1200] or "<empty>")
+          print()
+          print("=== ghostlock-extract --format conf (profile generation) ===")
+          q=subprocess.run([ex,path,"--format","conf","--out","profile.conf"],
+                           capture_output=True,text=True,timeout=900)
+          print("exit:",q.returncode)
+          print((q.stdout or "").strip()[:1500] or "<empty stdout>")
+          print("stderr:",(q.stderr or "").strip()[:1500] or "<empty>")
+          print("profile.conf exists:",os.path.exists("profile.conf"))
+          print()
+          print("VERDICT:")
+          if q.returncode==0 and os.path.exists("profile.conf"):
+              print("  profile generated - a GhostLock run may be possible after validation")
+          else:
+              print("  no usable profile. The upstream toolchain cannot port this kernel.")
+              print("  Manual reverse engineering of the 4.14 kernel would be required.")
+          PY
+          } 2>&1 | tee "$RUNNER_TEMP/kernel/ghostlock-report.txt"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostlock-portability-report
+          path: |
+            ${{ runner.temp }}/kernel/ghostlock-report.txt
+            profile.conf
+          if-no-files-found: warn
